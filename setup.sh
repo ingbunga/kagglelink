@@ -109,6 +109,7 @@ usage() {
     echo "  KAGGLELINK_KEYS_URL   URL to your authorized_keys file"
     echo "  KAGGLELINK_AUTH_KEY   Your Tailscale auth key"
     echo "  KAGGLELINK_TOKEN      Legacy alias for KAGGLELINK_AUTH_KEY"
+    echo "  KAGGLELINK_TAILSCALE_FOREGROUND  Set to 1 to keep start_tailscale.sh in the foreground"
     echo "  BRANCH                Override default branch (current: ${KAGGLELINK_BRANCH})"
     exit "$exit_code"
 }
@@ -243,12 +244,17 @@ log_step_complete "Cloning repository"
 
 log_info "Making scripts executable..."
 chmod +x setup_kaggle_tailscale.sh start_tailscale.sh
+chmod +x stop_tailscale.sh 2>/dev/null || true
 chmod +x setup_kaggle_zrok.sh start_zrok.sh 2>/dev/null || true
 
 log_step_start "Setting up SSH with your public keys"
 ./setup_kaggle_tailscale.sh "$AUTH_KEYS_URL"
 log_step_complete "Setting up SSH with your public keys"
 
-log_info "Starting Tailscale service with your auth key..."
-# Note: start_tailscale.sh is a blocking process that will display success banner
-./start_tailscale.sh "$TAILSCALE_AUTH_KEY"
+if [ "${KAGGLELINK_TAILSCALE_FOREGROUND:-0}" = "1" ]; then
+    log_info "Starting Tailscale service with your auth key in foreground mode..."
+    ./start_tailscale.sh "$TAILSCALE_AUTH_KEY"
+else
+    log_info "Starting Tailscale service with your auth key in detached mode..."
+    ./start_tailscale.sh --detach "$TAILSCALE_AUTH_KEY"
+fi

@@ -236,4 +236,4 @@ copy_screenrc() {
     start_ssh_service
 )
 
-log_success "Setup script completed. SSH service is running. Use start_tailscale.sh to join the tailnet."
+log_success "Setup script completed. SSH service is running. Use start_tailscale.sh to join the tailnet and stop_tailscale.sh to disconnect."

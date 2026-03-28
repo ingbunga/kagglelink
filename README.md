@@ -33,6 +33,8 @@ Execute the following one-line command in a Kaggle notebook cell. This script in
 
 Wait for the setup to complete. On success, the notebook logs will show the assigned Tailscale hostname, DNS name, and IPv4 address you can use from your local machine.
 
+By default, KaggleLink now detaches Tailscale into the background after setup so the notebook cell can finish normally. If you want foreground behavior for debugging, set `KAGGLELINK_TAILSCALE_FOREGROUND=1` before running `setup.sh`.
+
 > [!TIP]
 > **Avoiding Session Timeouts**: Kaggle's interactive notebook sessions have idle timeouts. For long-running remote development, use the **"Save & Run All"** feature by clicking the **Save Version** button (top right) and selecting "Save". This runs your notebook as a background job, avoiding timeout interruptions. You can still retrieve the Tailscale hostname and IP from the log viewer afterward.
 
@@ -101,6 +103,18 @@ Once the environment variables are set, you can run the setup script without arg
 ## Usage
 
 After completing the Kaggle setup, your Kaggle instance is attached to your tailnet. The script prints the node hostname, DNS name, and Tailscale IPv4 address.
+
+The Tailscale daemon keeps running in the background. To stop it from the Kaggle side later:
+
+```bash
+!cd /tmp/kagglelink && ./stop_tailscale.sh
+```
+
+If you want to fully log the node out and remove its local state instead:
+
+```bash
+!cd /tmp/kagglelink && ./stop_tailscale.sh --logout
+```
 
 ### Client Setup (on your Local Machine)
 

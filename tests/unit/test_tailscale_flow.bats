@@ -16,6 +16,11 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
+@test "P0: setup.sh starts Tailscale in detached mode by default" {
+    run grep -E -- "start_tailscale\.sh --detach|KAGGLELINK_TAILSCALE_FOREGROUND" "${PROJECT_ROOT}/setup.sh"
+    [ "$status" -eq 0 ]
+}
+
 @test "P0: setup_kaggle_tailscale.sh installs Tailscale from the official install script" {
     run grep -E "tailscale\.com/install\.sh" "${PROJECT_ROOT}/setup_kaggle_tailscale.sh"
     [ "$status" -eq 0 ]
@@ -39,6 +44,16 @@ teardown() {
     [ "$status" -eq 0 ]
 
     run grep -E "tailscale .* (logout|down)" "${PROJECT_ROOT}/start_tailscale.sh"
+    [ "$status" -eq 0 ]
+}
+
+@test "P1: start_tailscale.sh supports detached mode" {
+    run grep -E -- "Usage: ./start_tailscale.sh \\[--detach\\]|Detached mode enabled" "${PROJECT_ROOT}/start_tailscale.sh"
+    [ "$status" -eq 0 ]
+}
+
+@test "P1: stop_tailscale.sh supports preserving or removing state" {
+    run grep -E -- "tailscale --socket .* down|tailscale --socket .* logout|--logout" "${PROJECT_ROOT}/stop_tailscale.sh"
     [ "$status" -eq 0 ]
 }
 

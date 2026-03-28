@@ -7,16 +7,44 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=logging_utils.sh
 source "$SCRIPT_DIR/logging_utils.sh"
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage: ./start_tailscale.sh <tailscale_auth_key>"
-    exit 1
+usage() {
+    local exit_code="${1:-1}"
+    echo "Usage: ./start_tailscale.sh [--detach] <tailscale_auth_key>"
+    exit "$exit_code"
+}
+
+DETACH=0
+TAILSCALE_AUTH_KEY=""
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --detach)
+            DETACH=1
+            shift
+            ;;
+        -h|--help)
+            usage 0
+            ;;
+        *)
+            if [ -z "$TAILSCALE_AUTH_KEY" ]; then
+                TAILSCALE_AUTH_KEY="$1"
+                shift
+            else
+                usage 1
+            fi
+            ;;
+    esac
+done
+
+if [ -z "$TAILSCALE_AUTH_KEY" ]; then
+    usage 1
 fi
 
-TAILSCALE_AUTH_KEY=$1
 TAILSCALE_RUN_DIR="${TAILSCALE_RUN_DIR:-/tmp/kagglelink-tailscale}"
 TAILSCALE_SOCKET="${TAILSCALE_SOCKET:-$TAILSCALE_RUN_DIR/tailscaled.sock}"
 TAILSCALE_STATE="${TAILSCALE_STATE:-$TAILSCALE_RUN_DIR/tailscaled.state}"
 TAILSCALED_LOG="${TAILSCALED_LOG:-$TAILSCALE_RUN_DIR/tailscaled.log}"
+TAILSCALED_PIDFILE="${TAILSCALED_PIDFILE:-$TAILSCALE_RUN_DIR/tailscaled.pid}"
 TAILSCALED_PID=""
 
 build_tailscale_hostname() {
@@ -79,8 +107,9 @@ mkdir -p "$TAILSCALE_RUN_DIR"
 rm -f "$TAILSCALE_SOCKET"
 
 log_step_start "Starting tailscaled in userspace mode"
-tailscaled --tun=userspace-networking --state "$TAILSCALE_STATE" --socket "$TAILSCALE_SOCKET" >"$TAILSCALED_LOG" 2>&1 &
+nohup tailscaled --tun=userspace-networking --state "$TAILSCALE_STATE" --socket "$TAILSCALE_SOCKET" < /dev/null >"$TAILSCALED_LOG" 2>&1 &
 TAILSCALED_PID=$!
+echo "$TAILSCALED_PID" > "$TAILSCALED_PIDFILE"
 
 if ! wait_for_tailscaled_socket; then
     categorize_error "upstream" "tailscaled did not create its control socket" "Inspect ${TAILSCALED_LOG} and retry"
@@ -114,6 +143,14 @@ if [ -z "$TAILSCALE_IPV4" ] && [ -z "$TAILSCALE_DNS_NAME" ]; then
 fi
 
 show_tailscale_success_banner "$TAILSCALE_HOSTNAME" "$TAILSCALE_DNS_NAME" "$TAILSCALE_IPV4"
+
+if [ "$DETACH" = "1" ]; then
+    log_success "Detached mode enabled. Tailscale will keep running in the background."
+    log_info "Log file: $TAILSCALED_LOG"
+    log_info "PID file: $TAILSCALED_PIDFILE"
+    trap - EXIT INT TERM
+    exit 0
+fi
 
 log_info "Tailscale node is active. Keeping connection alive..."
 log_info "Press Ctrl+C to disconnect the node and stop the daemon."
