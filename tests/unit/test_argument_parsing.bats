@@ -19,6 +19,7 @@ teardown() {
     cleanup_test_dir
     restore_mocks
     unset KAGGLELINK_KEYS_URL
+    unset KAGGLELINK_AUTH_KEY
     unset KAGGLELINK_TOKEN
 }
 
@@ -37,7 +38,7 @@ teardown() {
     [ "$status" -ne 0 ]
 }
 
-@test "P0: should fail when --token is missing" {
+@test "P0: should fail when --auth-key is missing" {
     run bash setup.sh -k "https://example.com/keys"
     [ "$status" -ne 0 ]
 }
@@ -46,24 +47,24 @@ teardown() {
 # Valid Argument Tests
 # =============================================================================
 
-@test "P0: should accept short flags (-k, -t)" {
+@test "P0: should accept short flags (-k, -a)" {
     # Mock external commands to prevent actual execution
     mock_git
     mock_curl
     
     # The script will still fail at some point (git clone), but should parse args first
-    run timeout 5 bash setup.sh -k "https://example.com/keys" -t "test-token" 2>&1 || true
+    run timeout 5 bash setup.sh -k "https://example.com/keys" -a "test-auth-key" 2>&1 || true
     
     # Should not fail on argument parsing (look for specific error messages)
     [[ "$output" != *"Unknown option"* ]]
     [[ "$output" != *"Usage"* ]] || [ "$status" -eq 0 ]
 }
 
-@test "P0: should accept long flags (--keys-url, --token)" {
+@test "P0: should accept long flags (--keys-url, --auth-key)" {
     mock_git
     mock_curl
     
-    run timeout 5 bash setup.sh --keys-url "https://example.com/keys" --token "test-token" 2>&1 || true
+    run timeout 5 bash setup.sh --keys-url "https://example.com/keys" --auth-key "test-auth-key" 2>&1 || true
     
     [[ "$output" != *"Unknown option"* ]]
 }

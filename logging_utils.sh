@@ -144,3 +144,73 @@ show_success_banner() {
         echo ""
     fi
 }
+
+# Display success banner with Tailscale connection details
+# Args:
+#   $1: Tailscale hostname
+#   $2: Tailscale DNS name
+#   $3: Tailscale IPv4 address
+# Output: Formatted success banner to stdout
+show_tailscale_success_banner() {
+    local tailscale_hostname="$1"
+    local tailscale_dns_name="$2"
+    local tailscale_ipv4="$3"
+    local primary_target="$tailscale_dns_name"
+    local fallback_target="$tailscale_ipv4"
+
+    if [ -z "$primary_target" ]; then
+        primary_target="$fallback_target"
+    fi
+
+    if command -v gum &>/dev/null; then
+        local header
+        header=$(gum style --border double --padding "1 2" --align center --width 68 "✅ Setup Complete!")
+        local message
+        message=$(gum style --align center --width 68 "Your Kaggle instance is now reachable through Tailscale.")
+
+        local info_box
+        info_box=$(gum style --border rounded --padding "1 2" --width 68 "Node: ${tailscale_hostname}
+DNS: ${tailscale_dns_name:-Unavailable}
+IPv4: ${tailscale_ipv4:-Unavailable}")
+
+        local instructions
+        instructions=$(gum style --border rounded --padding "1 2" --width 68 "On your LOCAL machine:
+1. Install and sign in to Tailscale on the same tailnet
+2. Run: ssh root@${primary_target}")
+
+        if [ -n "$tailscale_dns_name" ] && [ -n "$tailscale_ipv4" ]; then
+            instructions=$(gum style --border rounded --padding "1 2" --width 68 "On your LOCAL machine:
+1. Install and sign in to Tailscale on the same tailnet
+2. Run: ssh root@${tailscale_dns_name}
+3. Fallback: ssh root@${tailscale_ipv4}")
+        fi
+
+        printf "\n"
+        gum join --vertical --align center "$header" " " "$message" " " "$info_box" " " "$instructions"
+    else
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════════════════╗"
+        echo "║                         ✅ Setup Complete!                          ║"
+        echo "╠══════════════════════════════════════════════════════════════════════╣"
+        echo "║  Your Kaggle instance is now reachable through Tailscale.          ║"
+        echo "║                                                                      ║"
+        printf "║  Node: %-59s║\n" "${tailscale_hostname}"
+        printf "║  DNS:  %-59s║\n" "${tailscale_dns_name:-Unavailable}"
+        printf "║  IPv4: %-59s║\n" "${tailscale_ipv4:-Unavailable}"
+        echo "║                                                                      ║"
+        echo "║  On your LOCAL machine:                                             ║"
+        echo "║  1. Install and sign in to Tailscale on the same tailnet           ║"
+        if [ -n "$tailscale_dns_name" ]; then
+            printf "║  2. ssh root@%-51s║\n" "${tailscale_dns_name}"
+        elif [ -n "$tailscale_ipv4" ]; then
+            printf "║  2. ssh root@%-51s║\n" "${tailscale_ipv4}"
+        else
+            echo "║  2. Check the Tailscale client for the assigned node address       ║"
+        fi
+        if [ -n "$tailscale_dns_name" ] && [ -n "$tailscale_ipv4" ]; then
+            printf "║  3. Fallback: ssh root@%-42s║\n" "${tailscale_ipv4}"
+        fi
+        echo "╚══════════════════════════════════════════════════════════════════════╝"
+        echo ""
+    fi
+}

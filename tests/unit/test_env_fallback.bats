@@ -19,9 +19,9 @@ if [[ "$*" == *"clone"* ]]; then
     # Extract the target directory (last argument)
     target="${@: -1}"
     mkdir -p "$target"
-    echo '#!/bin/bash' > "$target/setup_kaggle_zrok.sh"
-    echo '#!/bin/bash' > "$target/start_zrok.sh"
-    chmod +x "$target/setup_kaggle_zrok.sh" "$target/start_zrok.sh"
+    echo '#!/bin/bash' > "$target/setup_kaggle_tailscale.sh"
+    echo '#!/bin/bash' > "$target/start_tailscale.sh"
+    chmod +x "$target/setup_kaggle_tailscale.sh" "$target/start_tailscale.sh"
     exit 0
 fi
 # For any other git command, just succeed
@@ -38,6 +38,7 @@ teardown() {
         rm -rf "$TEST_TEMP_DIR"
     fi
     unset KAGGLELINK_KEYS_URL
+    unset KAGGLELINK_AUTH_KEY
     unset KAGGLELINK_TOKEN
 }
 
@@ -47,15 +48,15 @@ teardown() {
 
 @test "P0: should use KAGGLELINK_KEYS_URL when -k not provided" {
     export KAGGLELINK_KEYS_URL="https://example.com/keys"
-    export KAGGLELINK_TOKEN="test-token"
+    export KAGGLELINK_AUTH_KEY="test-auth-key"
     
     run bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -eq 0 ]
 }
 
-@test "P0: should use KAGGLELINK_TOKEN when -t not provided" {
+@test "P0: should use KAGGLELINK_AUTH_KEY when -a not provided" {
     export KAGGLELINK_KEYS_URL="https://example.com/keys"
-    export KAGGLELINK_TOKEN="test-token"
+    export KAGGLELINK_AUTH_KEY="test-auth-key"
     
     run bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -eq 0 ]
@@ -63,7 +64,7 @@ teardown() {
 
 @test "P0: should use both environment variables when no CLI args provided" {
     export KAGGLELINK_KEYS_URL="https://example.com/keys"
-    export KAGGLELINK_TOKEN="test-token"
+    export KAGGLELINK_AUTH_KEY="test-auth-key"
     
     run bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -eq 0 ]
@@ -71,36 +72,36 @@ teardown() {
 
 @test "P0: CLI args should override environment variables (keys URL)" {
     export KAGGLELINK_KEYS_URL="https://env.com/keys"
-    export KAGGLELINK_TOKEN="env-token"
+    export KAGGLELINK_AUTH_KEY="env-auth-key"
     
-    run bash "${PROJECT_ROOT}/setup.sh" -k "https://cli.com/keys" -t "cli-token"
+    run bash "${PROJECT_ROOT}/setup.sh" -k "https://cli.com/keys" -a "cli-auth-key"
     [ "$status" -eq 0 ]
     # Verify CLI values are actually used by checking source logging
     [[ "$output" == *"Using keys URL from: CLI argument"* ]]
-    [[ "$output" == *"Using token from: CLI argument"* ]]
+    [[ "$output" == *"Using Tailscale auth key from: CLI argument"* ]]
 }
 
 @test "P0: should fail when both CLI and env are missing (keys URL)" {
-    run env -u KAGGLELINK_KEYS_URL KAGGLELINK_TOKEN="test-token" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
+    run env -u KAGGLELINK_KEYS_URL KAGGLELINK_AUTH_KEY="test-auth-key" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -ne 0 ]
     [[ "$output" == *"key"* ]] || [[ "$output" == *"URL"* ]]
 }
 
-@test "P0: should fail when both CLI and env are missing (token)" {
-    run env -u KAGGLELINK_TOKEN KAGGLELINK_KEYS_URL="https://example.com/keys" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
+@test "P0: should fail when both CLI and env are missing (auth key)" {
+    run env -u KAGGLELINK_AUTH_KEY KAGGLELINK_KEYS_URL="https://example.com/keys" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -ne 0 ]
-    [[ "$output" == *"token"* ]]
+    [[ "$output" == *"auth key"* ]]
 }
 
 @test "P1: error message should be clear when keys URL is missing" {
-    run env -u KAGGLELINK_KEYS_URL KAGGLELINK_TOKEN="test-token" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
+    run env -u KAGGLELINK_KEYS_URL KAGGLELINK_AUTH_KEY="test-auth-key" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -ne 0 ]
     # Check for actionable error message
     [[ "$output" == *"Error"* ]] || [[ "$output" == *"required"* ]]
 }
 
-@test "P1: error message should be clear when token is missing" {
-    run env -u KAGGLELINK_TOKEN KAGGLELINK_KEYS_URL="https://example.com/keys" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
+@test "P1: error message should be clear when auth key is missing" {
+    run env -u KAGGLELINK_AUTH_KEY KAGGLELINK_KEYS_URL="https://example.com/keys" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -ne 0 ]
     # Check for actionable error message
     [[ "$output" == *"Error"* ]] || [[ "$output" == *"required"* ]]
@@ -116,38 +117,38 @@ teardown() {
     [[ "$output" == *"Using keys URL from: CLI argument"* ]]
 }
 
-@test "P0: should log CLI source when -t provided" {
-    run bash "${PROJECT_ROOT}/setup.sh" -k "https://example.com/keys" -t "test-token"
+@test "P0: should log CLI source when -a provided" {
+    run bash "${PROJECT_ROOT}/setup.sh" -k "https://example.com/keys" -a "test-auth-key"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Using token from: CLI argument"* ]]
+    [[ "$output" == *"Using Tailscale auth key from: CLI argument"* ]]
 }
 
 @test "P0: should log env var source when KAGGLELINK_KEYS_URL used" {
     export KAGGLELINK_KEYS_URL="https://example.com/keys"
-    export KAGGLELINK_TOKEN="test-token"
+    export KAGGLELINK_AUTH_KEY="test-auth-key"
     
     run bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Using keys URL from: KAGGLELINK_KEYS_URL env var"* ]]
 }
 
-@test "P0: should log env var source when KAGGLELINK_TOKEN used" {
+@test "P0: should log env var source when KAGGLELINK_AUTH_KEY used" {
     export KAGGLELINK_KEYS_URL="https://example.com/keys"
-    export KAGGLELINK_TOKEN="test-token"
+    export KAGGLELINK_AUTH_KEY="test-auth-key"
     
     run bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Using token from: KAGGLELINK_TOKEN env var"* ]]
+    [[ "$output" == *"Using Tailscale auth key from: KAGGLELINK_AUTH_KEY env var"* ]]
 }
 
 @test "P0: should log CLI source when both CLI and env var provided" {
     export KAGGLELINK_KEYS_URL="https://env.com/keys"
-    export KAGGLELINK_TOKEN="env-token"
+    export KAGGLELINK_AUTH_KEY="env-auth-key"
     
-    run bash "${PROJECT_ROOT}/setup.sh" -k "https://cli.com/keys" -t "cli-token"
+    run bash "${PROJECT_ROOT}/setup.sh" -k "https://cli.com/keys" -a "cli-auth-key"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Using keys URL from: CLI argument"* ]]
-    [[ "$output" == *"Using token from: CLI argument"* ]]
+    [[ "$output" == *"Using Tailscale auth key from: CLI argument"* ]]
 }
 
 # =============================================================================
@@ -155,22 +156,22 @@ teardown() {
 # =============================================================================
 
 @test "P0: error message mentions both -k flag AND KAGGLELINK_KEYS_URL env var" {
-    run env -u KAGGLELINK_KEYS_URL KAGGLELINK_TOKEN="test-token" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
+    run env -u KAGGLELINK_KEYS_URL KAGGLELINK_AUTH_KEY="test-auth-key" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -ne 0 ]
     [[ "$output" == *"-k"* ]] || [[ "$output" == *"--keys-url"* ]]
     [[ "$output" == *"KAGGLELINK_KEYS_URL"* ]]
 }
 
-@test "P0: error message mentions both -t flag AND KAGGLELINK_TOKEN env var" {
-    run env -u KAGGLELINK_TOKEN KAGGLELINK_KEYS_URL="https://example.com/keys" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
+@test "P0: error message mentions both -a flag AND KAGGLELINK_AUTH_KEY env var" {
+    run env -u KAGGLELINK_AUTH_KEY KAGGLELINK_KEYS_URL="https://example.com/keys" PATH="$TEST_TEMP_DIR:$PATH" bash "${PROJECT_ROOT}/setup.sh"
     [ "$status" -ne 0 ]
-    [[ "$output" == *"-t"* ]] || [[ "$output" == *"--token"* ]]
-    [[ "$output" == *"KAGGLELINK_TOKEN"* ]]
+    [[ "$output" == *"-a"* ]] || [[ "$output" == *"--auth-key"* ]]
+    [[ "$output" == *"KAGGLELINK_AUTH_KEY"* ]]
 }
 
 @test "P0: usage output includes environment variable documentation" {
     run bash "${PROJECT_ROOT}/setup.sh" -h
     [ "$status" -eq 0 ]
     [[ "$output" == *"KAGGLELINK_KEYS_URL"* ]]
-    [[ "$output" == *"KAGGLELINK_TOKEN"* ]]
+    [[ "$output" == *"KAGGLELINK_AUTH_KEY"* ]]
 }

@@ -6,8 +6,8 @@ set -e
 # Inline Logging Functions (embedded for bootstrap phase)
 # ============================================================================
 # These are embedded directly in setup.sh because this script is downloaded
-# standalone before the repository is cloned. Other scripts (setup_kaggle_zrok.sh,
-# start_zrok.sh) source logging_utils.sh from the cloned repository.
+# standalone before the repository is cloned. Other scripts source
+# logging_utils.sh from the cloned repository.
 
 # Store step start times for elapsed time calculation
 declare -A _STEP_START_TIMES
@@ -97,16 +97,18 @@ INSTALL_DIR="/tmp/kagglelink"
 # Takes optional exit code parameter (default: 1 for errors, 0 for help)
 usage() {
     local exit_code="${1:-1}"
-    echo "Usage: curl -sS https://raw.githubusercontent.com/bhdai/kagglelink/refs/heads/${KAGGLELINK_BRANCH}/setup.sh | bash -s -- -k <your_public_key_url> -t <your_zrok_token>"
+    echo "Usage: curl -sS https://raw.githubusercontent.com/bhdai/kagglelink/refs/heads/${KAGGLELINK_BRANCH}/setup.sh | bash -s -- -k <your_public_key_url> -a <your_tailscale_auth_key>"
     echo ""
     echo "Options:"
     echo "  -k, --keys-url URL    URL to your authorized_keys file"
-    echo "  -t, --token TOKEN     Your zrok token"
+    echo "  -a, --auth-key KEY    Your Tailscale auth key"
+    echo "  -t, --token TOKEN     Legacy alias for --auth-key"
     echo "  -h, --help            Display this help message"
     echo ""
     echo "Environment Variables (fallback when CLI flags not provided):"
     echo "  KAGGLELINK_KEYS_URL   URL to your authorized_keys file"
-    echo "  KAGGLELINK_TOKEN      Your zrok token"
+    echo "  KAGGLELINK_AUTH_KEY   Your Tailscale auth key"
+    echo "  KAGGLELINK_TOKEN      Legacy alias for KAGGLELINK_AUTH_KEY"
     echo "  BRANCH                Override default branch (current: ${KAGGLELINK_BRANCH})"
     exit "$exit_code"
 }
@@ -114,7 +116,7 @@ usage() {
 # Parse command line arguments
 # Initialize source tracking variables
 AUTH_KEYS_SOURCE=""
-ZROK_TOKEN_SOURCE=""
+TAILSCALE_AUTH_KEY_SOURCE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -123,9 +125,14 @@ while [[ $# -gt 0 ]]; do
             AUTH_KEYS_SOURCE="CLI argument"
             shift 2
             ;;
+        -a | --auth-key)
+            TAILSCALE_AUTH_KEY="$2"
+            TAILSCALE_AUTH_KEY_SOURCE="CLI argument"
+            shift 2
+            ;;
         -t | --token)
-            ZROK_TOKEN="$2"
-            ZROK_TOKEN_SOURCE="CLI argument"
+            TAILSCALE_AUTH_KEY="$2"
+            TAILSCALE_AUTH_KEY_SOURCE="CLI argument (--token legacy alias)"
             shift 2
             ;;
         -h | --help)
@@ -144,17 +151,22 @@ if [ -z "$AUTH_KEYS_URL" ] && [ -n "$KAGGLELINK_KEYS_URL" ]; then
     AUTH_KEYS_SOURCE="KAGGLELINK_KEYS_URL env var"
 fi
 
-if [ -z "$ZROK_TOKEN" ] && [ -n "$KAGGLELINK_TOKEN" ]; then
-    ZROK_TOKEN="$KAGGLELINK_TOKEN"
-    ZROK_TOKEN_SOURCE="KAGGLELINK_TOKEN env var"
+if [ -z "$TAILSCALE_AUTH_KEY" ] && [ -n "$KAGGLELINK_AUTH_KEY" ]; then
+    TAILSCALE_AUTH_KEY="$KAGGLELINK_AUTH_KEY"
+    TAILSCALE_AUTH_KEY_SOURCE="KAGGLELINK_AUTH_KEY env var"
+fi
+
+if [ -z "$TAILSCALE_AUTH_KEY" ] && [ -n "$KAGGLELINK_TOKEN" ]; then
+    TAILSCALE_AUTH_KEY="$KAGGLELINK_TOKEN"
+    TAILSCALE_AUTH_KEY_SOURCE="KAGGLELINK_TOKEN env var (legacy alias)"
 fi
 
 # Log configuration source for transparency
 if [ -n "$AUTH_KEYS_URL" ]; then
     echo "ℹ️  Using keys URL from: $AUTH_KEYS_SOURCE"
 fi
-if [ -n "$ZROK_TOKEN" ]; then
-    echo "ℹ️  Using token from: $ZROK_TOKEN_SOURCE"
+if [ -n "$TAILSCALE_AUTH_KEY" ]; then
+    echo "ℹ️  Using Tailscale auth key from: $TAILSCALE_AUTH_KEY_SOURCE"
 fi
 
 # Check for required parameters
@@ -166,10 +178,12 @@ if [ -z "$AUTH_KEYS_URL" ]; then
     exit 1
 fi
 
-if [ -z "$ZROK_TOKEN" ]; then
-    echo "Error: zrok token is required"
-    echo "       Provide via: -t <token> or --token <token>"
-    echo "       Or set: KAGGLELINK_TOKEN environment variable"
+if [ -z "$TAILSCALE_AUTH_KEY" ]; then
+    echo "Error: Tailscale auth key is required"
+    echo "       Provide via: -a <key> or --auth-key <key>"
+    echo "       Legacy alias: -t <token> or --token <token>"
+    echo "       Or set: KAGGLELINK_AUTH_KEY environment variable"
+    echo "       Legacy env alias: KAGGLELINK_TOKEN"
     echo "       Run with --help for more information"
     exit 1
 fi
@@ -228,12 +242,13 @@ log_success "Cloned repository (branch: ${KAGGLELINK_BRANCH}, commit: ${COMMIT_H
 log_step_complete "Cloning repository"
 
 log_info "Making scripts executable..."
-chmod +x setup_kaggle_zrok.sh start_zrok.sh
+chmod +x setup_kaggle_tailscale.sh start_tailscale.sh
+chmod +x setup_kaggle_zrok.sh start_zrok.sh 2>/dev/null || true
 
 log_step_start "Setting up SSH with your public keys"
-./setup_kaggle_zrok.sh "$AUTH_KEYS_URL"
+./setup_kaggle_tailscale.sh "$AUTH_KEYS_URL"
 log_step_complete "Setting up SSH with your public keys"
 
-log_info "Starting zrok service with your token..."
-# Note: start_zrok.sh is a blocking process that will display success banner
-./start_zrok.sh "$ZROK_TOKEN"
+log_info "Starting Tailscale service with your auth key..."
+# Note: start_tailscale.sh is a blocking process that will display success banner
+./start_tailscale.sh "$TAILSCALE_AUTH_KEY"

@@ -16,28 +16,25 @@ KaggleLink establishes a secure SSH tunnel to your Kaggle notebook, giving you f
 
 To use KaggleLink, you need:
 
-1.  **Zrok Token**: A Zrok token is essential for establishing the secure tunnel. Create an account at [myZrok.io](https://myzrok.io/) to obtain your token. Ensure your account is on the **Starter plan** to utilize NetFoundry's public Zrok instance, which offers 2 environment connections (one for your local machine, one for the Kaggle instance).
-2.  **Public SSH Key**: Your public SSH key needs to be accessible via a URL, either from a GitHub repository or another public file hosting service.
+1.  **Tailscale Auth Key**: Create a reusable or ephemeral auth key in your Tailscale admin console. KaggleLink uses it to attach the Kaggle notebook to your tailnet.
+2.  **Local Tailscale Client**: Your local machine needs Tailscale installed and signed in to the same tailnet so you can SSH directly to the Kaggle node.
+3.  **Public SSH Key URL**: KaggleLink still provisions `authorized_keys` on the notebook for compatibility with a standard SSH server. Host your public key somewhere accessible over HTTPS, such as a public GitHub raw URL.
 
 ### Quick Setup (on Kaggle)
 
-Execute the following one-line command in a Kaggle notebook cell. This script will set up Zrok and SSH on your Kaggle instance.
+Execute the following one-line command in a Kaggle notebook cell. This script installs Tailscale, configures SSH, and joins your Kaggle instance to your tailnet.
 
 ```bash
-!curl -sS https://bhdai.github.io/setup | bash -s -- -k <public_key_url> -t <zrok_token>
+!curl -sS https://bhdai.github.io/setup | bash -s -- -k <public_key_url> -a <tailscale_auth_key>
 ```
 
-KaggleLink uses a project-managed pinned Zrok version (`v1.1.11`) during setup for stable Linux amd64 compatibility.
-
 > [!NOTE]
-> Replace `<public_key_url>` with the URL of your public SSH key file and `<zrok_token>` with your Zrok token.
+> Replace `<public_key_url>` with the URL of your public SSH key file and `<tailscale_auth_key>` with your Tailscale auth key.
 
-Wait for the setup to complete. You should see output similar to this upon successful configuration:
-
-![](https://github.com/user-attachments/assets/22f564f3-8622-4c6c-bb82-9c9c63dd322a)
+Wait for the setup to complete. On success, the notebook logs will show the assigned Tailscale hostname, DNS name, and IPv4 address you can use from your local machine.
 
 > [!TIP]
-> **Avoiding Session Timeouts**: Kaggle's interactive notebook sessions have idle timeouts. For long-running remote development, use the **"Save & Run All"** feature by clicking the **Save Version** button (top right) and selecting "Save". This runs your notebook as a background job, avoiding timeout interruptions. You can still get the zrok share token from the log screen(click active event at bottom left -> Open Logs in Viewer)
+> **Avoiding Session Timeouts**: Kaggle's interactive notebook sessions have idle timeouts. For long-running remote development, use the **"Save & Run All"** feature by clicking the **Save Version** button (top right) and selecting "Save". This runs your notebook as a background job, avoiding timeout interruptions. You can still retrieve the Tailscale hostname and IP from the log viewer afterward.
 
 #### How to set up your public SSH key?
 
@@ -54,12 +51,12 @@ Wait for the setup to complete. You should see output similar to this upon succe
 
     Copy the URL from your browser's address bar. It typically looks like `https://raw.githubusercontent.com/<username>/<repo_name>/refs/heads/main/<file_path>`.
 
-#### How to get your Zrok token?
+#### How to get your Tailscale auth key?
 
-1.  If you don't have one, create your Zrok account at [myZrok.io](https://myzrok.io/).
-2.  Go to the [billing page](https://myzrok.io/billing) and ensure your plan is set to **Starter**.
-3.  Create a new token.
-4.  Visit [https://api-v1.zrok.io](https://api-v1.zrok.io/) to retrieve and manage your Zrok tokens.
+1.  Open the Tailscale admin console for your tailnet.
+2.  Create an auth key for the notebook.
+3.  If you want the Kaggle node to disappear automatically after shutdown, prefer an **ephemeral** key.
+4.  Keep the key secret and pass it through Kaggle Secrets or a notebook environment variable when possible.
 
 ### Advanced: Environment Variables
 
@@ -68,10 +65,11 @@ For automated pipelines or power users, you can configure KaggleLink using envir
 | Variable | CLI Equivalent | Description |
 |----------|----------------|-------------|
 | `KAGGLELINK_KEYS_URL` | `-k` | URL to your public SSH key |
-| `KAGGLELINK_TOKEN` | `-t` | Your Zrok token |
+| `KAGGLELINK_AUTH_KEY` | `-a` | Your Tailscale auth key |
+| `KAGGLELINK_TOKEN` | `-t` | Legacy alias for the Tailscale auth key |
 
 > [!NOTE]
-> CLI arguments (`-k`, `-t`) always override environment variables if both are present.
+> CLI arguments (`-k`, `-a`) always override environment variables if both are present.
 
 #### Setting Environment Variables in Kaggle
 
@@ -87,8 +85,8 @@ import os
 user_secrets = UserSecretsClient()
 
 # Set environment variables from secrets
-# Ensure you have added 'KAGGLELINK_TOKEN' and 'KAGGLELINK_KEYS_URL' (optional) to your secrets
-os.environ['KAGGLELINK_TOKEN'] = user_secrets.get_secret("KAGGLELINK_TOKEN")
+# Ensure you have added 'KAGGLELINK_AUTH_KEY' and 'KAGGLELINK_KEYS_URL' to your secrets
+os.environ['KAGGLELINK_AUTH_KEY'] = user_secrets.get_secret("KAGGLELINK_AUTH_KEY")
 
 # You can also set the URL directly if it's public and not stored as a secret
 os.environ['KAGGLELINK_KEYS_URL'] = "https://raw.githubusercontent.com/your/repo/main/key.pub"
@@ -102,41 +100,41 @@ Once the environment variables are set, you can run the setup script without arg
 
 ## Usage
 
-After completing the Kaggle setup, your Kaggle instance is ready for connection. The script will output a Zrok private token at the end which you'll use to connect from your local machine.
+After completing the Kaggle setup, your Kaggle instance is attached to your tailnet. The script prints the node hostname, DNS name, and Tailscale IPv4 address.
 
 ### Client Setup (on your Local Machine)
 
-1.  **Install Zrok locally**: Follow the [official Zrok installation guide](https://docs.zrok.io/docs/guides/install/).
-    For Arch-based distributions, you can use:
+1.  **Install Tailscale locally** and sign in to the same tailnet you used for the Kaggle auth key.
+2.  **Find the node identity** from the Kaggle notebook output.
+    You will usually get both:
+
+    - a MagicDNS hostname such as `kagglelink-abc123.your-tailnet.ts.net`
+    - a Tailscale IPv4 address such as `100.x.y.z`
+
+3.  **Connect with SSH**:
 
     ```bash
-    yay -S zrok-bin
+    ssh root@kagglelink-abc123.your-tailnet.ts.net
     ```
 
-2.  **Enable Zrok**: Enable Zrok on your local machine using your personal Zrok token:
+    If MagicDNS is unavailable in your tailnet, use the Tailscale IPv4 address instead:
 
     ```bash
-    zrok enable <your_personal_zrok_token>
+    ssh root@100.x.y.z
     ```
 
-3.  **Access the private tunnel**: Use the Zrok `private_token` obtained from the Kaggle setup output to establish the connection:
-
-    ```bash
-    zrok access private <the_private_token_from_kaggle_setup>
-    ```
-
-    This command will open a dashboard in your terminal, displaying your connection details, including a local address like `127.0.0.1:9191`.
+    KaggleLink enables Tailscale SSH when the node comes up, so the standard `ssh` command works once both machines are on the same tailnet.
 
 ### SSH Connection
 
-Connect to your Kaggle instance via SSH using the local address and port provided by Zrok (e.g., `127.0.0.1:9191`).
+Connect to your Kaggle instance via its Tailscale hostname or IP:
 
 ```bash
-ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/kaggle_rsa -p 9191 root@127.0.0.1
+ssh root@kagglelink-abc123.your-tailnet.ts.net
 ```
 
 > [!NOTE]
-> The port (e.g., 9191) generally remains consistent across sessions, so you typically won't need to adjust it for each new instance.
+> On tailnets with the default Tailscale SSH policy, connecting to your own device as `root` is allowed after you opt the node into Tailscale SSH.
 
 #### SSH Configuration
 
@@ -144,11 +142,7 @@ To simplify future connections, add the following configuration to your `~/.ssh/
 
 ```
 Host Kaggle
-    HostName 127.0.0.1
-    UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-    IdentityFile ~/.ssh/kaggle_rsa
-    Port 9191
+    HostName kagglelink-abc123.your-tailnet.ts.net
     User root
 ```
 
@@ -160,18 +154,15 @@ Transfer files between your local machine and Kaggle instance using `rsync`:
 
 ```bash
 # From local to remote
-rsync -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/kaggle_rsa -p 9191" <path_to_local_file> root@127.0.0.1:<remote_destination_path>
-# or if you have you SSH config set up (see above)
+rsync -avz <path_to_local_file> root@kagglelink-abc123.your-tailnet.ts.net:<remote_destination_path>
+# or if you have your SSH config set up (see above)
 rsync -avz <path_to_local_file> Kaggle:<remote_destination_path>
 
 # From remote to local
-rsync -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/kaggle_rsa -p 9191" root@127.0.0.1:<path_to_remote_file> <local_destination_path>
-# or if you have you SSH config set up (see above)
+rsync -avz root@kagglelink-abc123.your-tailnet.ts.net:<path_to_remote_file> <local_destination_path>
+# or if you have your SSH config set up (see above)
 rsync -avz Kaggle:<path_to_remote_file> <local_destination_path>
 ```
-
-> [!IMPORTANT]
-> The Zrok Starter plan limits you to two environment connections. While the script automatically releases the Kaggle instance's connection upon shutdown, it's good practice to verify your active connections at [https://api-v1.zrok.io/](https://api-v1.zrok.io/) before rerunning the script, ensuring your local machine is the primary active connection.
 
 ## Contributing
 

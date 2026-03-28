@@ -112,4 +112,4 @@ jobs:
   #       env:
   #         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
   #         KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-  #         ZROK_TOKEN: ${{ secrets.ZROK_TOKEN }}
+  #         KAGGLELINK_AUTH_KEY: ${{ secrets.KAGGLELINK_AUTH_KEY }}

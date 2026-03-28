@@ -7,7 +7,7 @@ to verify that KaggleLink still works on Kaggle's environment.
 
 Requirements:
 - KAGGLE_USERNAME and KAGGLE_KEY environment variables set
-- ZROK_TOKEN for tunnel establishment
+- KAGGLELINK_AUTH_KEY for tailnet attachment testing (optional for a full live run)
 - kaggle CLI installed (pip install kaggle)
 
 Usage:
@@ -33,7 +33,7 @@ TIMEOUT_MINUTES = 10
 SUCCESS_INDICATORS = [
     "Setup complete",
     "✅",
-    "zrok share private",
+    "start_tailscale.sh",
 ]
 FAILURE_INDICATORS = [
     "ERROR",
@@ -98,13 +98,13 @@ else:
 
 # Step 2: Check script content (dry validation)
 print("\\n[2/3] Validating script content...")
-if "setup_kaggle_zrok.sh" in result.stdout:
-    print("✅ Script references setup_kaggle_zrok.sh")
+if "setup_kaggle_tailscale.sh" in result.stdout:
+    print("✅ Script references setup_kaggle_tailscale.sh")
 else:
     print("⚠️ Script may have changed")
 
-if "start_zrok.sh" in result.stdout:
-    print("✅ Script references start_zrok.sh")
+if "start_tailscale.sh" in result.stdout:
+    print("✅ Script references start_tailscale.sh")
 else:
     print("⚠️ Script may have changed")
 
@@ -115,7 +115,7 @@ print(f"Bash: {subprocess.getoutput('bash --version | head -1')}")
 print(f"Curl: {subprocess.getoutput('curl --version | head -1')}")
 
 # Note: We don't actually run the full setup in canary
-# because it would require valid Zrok tokens and create sessions
+# because it would require a valid Tailscale auth key and create sessions
 # This is a connectivity and script availability test
 
 print("\\n" + "=" * 50)
@@ -138,8 +138,8 @@ def run_canary():
     
     scripts = [
         "https://raw.githubusercontent.com/bhdai/kagglelink/main/setup.sh",
-        "https://raw.githubusercontent.com/bhdai/kagglelink/main/setup_kaggle_zrok.sh",
-        "https://raw.githubusercontent.com/bhdai/kagglelink/main/start_zrok.sh",
+        "https://raw.githubusercontent.com/bhdai/kagglelink/main/setup_kaggle_tailscale.sh",
+        "https://raw.githubusercontent.com/bhdai/kagglelink/main/start_tailscale.sh",
     ]
     
     all_ok = True

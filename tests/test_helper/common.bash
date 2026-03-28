@@ -100,6 +100,12 @@ assert_no_secrets_in_output() {
         echo "ERROR: Output contains potential Zrok token!" >&2
         return 1
     fi
+
+    # Tailscale auth keys begin with tskey-auth-
+    if echo "$output" | grep -qE 'tskey-auth-[A-Za-z0-9_-]+'; then
+        echo "ERROR: Output contains potential Tailscale auth key!" >&2
+        return 1
+    fi
     
     # Check for SSH private key markers
     if echo "$output" | grep -q "PRIVATE KEY"; then
