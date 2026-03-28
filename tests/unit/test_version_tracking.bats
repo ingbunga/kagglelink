@@ -76,7 +76,7 @@ set -e
 # Extract just the version and clone logic from setup.sh
 KAGGLELINK_VERSION="1.2.0"
 KAGGLELINK_BRANCH="${BRANCH:-main}"
-REPO_URL="https://github.com/bhdai/kagglelink.git"
+REPO_URL="https://github.com/ingbunga/kagglelink.git"
 INSTALL_DIR="/tmp/kagglelink-test-$$"
 
 # Mock git clone
@@ -104,7 +104,7 @@ WRAPPER
 set -e
 KAGGLELINK_VERSION="1.2.0"
 KAGGLELINK_BRANCH="${BRANCH:-main}"
-REPO_URL="https://github.com/bhdai/kagglelink.git"
+REPO_URL="https://github.com/ingbunga/kagglelink.git"
 INSTALL_DIR="/tmp/kagglelink-test-$$"
 
 if ! git clone -b "$KAGGLELINK_BRANCH" "$REPO_URL" "$INSTALL_DIR" 2>/dev/null; then
@@ -129,7 +129,7 @@ WRAPPER
 set -e
 KAGGLELINK_VERSION="1.2.0"
 KAGGLELINK_BRANCH="${BRANCH:-main}"
-REPO_URL="https://github.com/bhdai/kagglelink.git"
+REPO_URL="https://github.com/ingbunga/kagglelink.git"
 INSTALL_DIR="/tmp/kagglelink-test-$$"
 
 if ! git clone -b "$KAGGLELINK_BRANCH" "$REPO_URL" "$INSTALL_DIR" 2>/dev/null; then

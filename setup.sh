@@ -86,18 +86,18 @@ fi
 echo "===================================="
 echo "kagglelink setup tool"
 echo "Version: ${KAGGLELINK_VERSION} (branch: ${KAGGLELINK_BRANCH})"
-echo "For more information check out: https://github.com/bhdai/kagglelink"
+echo "For more information check out: https://github.com/ingbunga/kagglelink"
 echo "===================================="
 
 # Default repository URL and branch
-REPO_URL="https://github.com/bhdai/kagglelink.git"
+REPO_URL="https://github.com/ingbunga/kagglelink.git"
 INSTALL_DIR="/tmp/kagglelink"
 
 # Function to display usage information
 # Takes optional exit code parameter (default: 1 for errors, 0 for help)
 usage() {
     local exit_code="${1:-1}"
-    echo "Usage: curl -sS https://raw.githubusercontent.com/bhdai/kagglelink/refs/heads/${KAGGLELINK_BRANCH}/setup.sh | bash -s -- -k <your_public_key_url> -a <your_tailscale_auth_key>"
+    echo "Usage: curl -sS https://raw.githubusercontent.com/ingbunga/kagglelink/refs/heads/${KAGGLELINK_BRANCH}/setup.sh | bash -s -- -k <your_public_key_url> -a <your_tailscale_auth_key>"
     echo ""
     echo "Options:"
     echo "  -k, --keys-url URL    URL to your authorized_keys file"
@@ -219,7 +219,7 @@ if [ $clone_status -ne 0 ]; then
     if [[ "$clone_output" == *"Remote branch"*"not found"* ]] || [[ "$clone_output" == *"couldn't find remote ref"* ]]; then
         categorize_error "prerequisite" \
             "Branch '$KAGGLELINK_BRANCH' does not exist in repository" \
-            "Use BRANCH=main or check available branches at https://github.com/bhdai/kagglelink"
+            "Use BRANCH=main or check available branches at https://github.com/ingbunga/kagglelink"
     # Check for network issues
     elif [[ "$clone_output" == *"Could not resolve host"* ]] || \
          [[ "$clone_output" == *"Connection refused"* ]] || \

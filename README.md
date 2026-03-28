@@ -25,7 +25,7 @@ To use KaggleLink, you need:
 Execute the following one-line command in a Kaggle notebook cell. This script installs Tailscale, configures SSH, and joins your Kaggle instance to your tailnet.
 
 ```bash
-!curl -sS https://bhdai.github.io/setup | bash -s -- -k <public_key_url> -a <tailscale_auth_key>
+!curl -sS https://raw.githubusercontent.com/ingbunga/kagglelink/main/setup.sh | bash -s -- -k <public_key_url> -a <tailscale_auth_key>
 ```
 
 > [!NOTE]
@@ -95,7 +95,7 @@ os.environ['KAGGLELINK_KEYS_URL'] = "https://raw.githubusercontent.com/your/repo
 Once the environment variables are set, you can run the setup script without arguments:
 
 ```bash
-!curl -sS https://bhdai.github.io/setup | bash
+!curl -sS https://raw.githubusercontent.com/ingbunga/kagglelink/main/setup.sh | bash
 ```
 
 ## Usage

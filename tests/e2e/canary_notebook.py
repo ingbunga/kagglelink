@@ -87,7 +87,7 @@ print("=" * 50)
 # Step 1: Download setup script
 print("\\n[1/3] Downloading setup script...")
 result = subprocess.run(
-    ["curl", "-sS", "https://raw.githubusercontent.com/bhdai/kagglelink/main/setup.sh"],
+    ["curl", "-sS", "https://raw.githubusercontent.com/ingbunga/kagglelink/main/setup.sh"],
     capture_output=True,
     text=True
 )
@@ -137,9 +137,9 @@ def run_canary():
     print("\n📥 Checking script availability...")
     
     scripts = [
-        "https://raw.githubusercontent.com/bhdai/kagglelink/main/setup.sh",
-        "https://raw.githubusercontent.com/bhdai/kagglelink/main/setup_kaggle_tailscale.sh",
-        "https://raw.githubusercontent.com/bhdai/kagglelink/main/start_tailscale.sh",
+        "https://raw.githubusercontent.com/ingbunga/kagglelink/main/setup.sh",
+        "https://raw.githubusercontent.com/ingbunga/kagglelink/main/setup_kaggle_tailscale.sh",
+        "https://raw.githubusercontent.com/ingbunga/kagglelink/main/start_tailscale.sh",
     ]
     
     all_ok = True
